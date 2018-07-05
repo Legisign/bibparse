@@ -40,3 +40,4 @@
  * 2016-11-03  0.1.1.dev3    Fix of an assert: None is not a type!
  * 2017-01-04  0.1.1.dev4    dev1 renaming propagated to by_type(), by_regex().
  * 2017-03-24  0.9.9.beta1   No changes: first beta.
+ * 2018-07-05  0.9.9.beta2   One more Python2 compatibility change to super().

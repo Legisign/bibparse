@@ -12,13 +12,13 @@
   Author:       Tommi Nieminen <software@legisign.org>
   License:      GPL version 3 or later
 
-  2017-03-24  0.9.9.beta1   No changes: first beta.
+  2018-07-05  0.9.9.beta2   One more Python2 compatibility change to super().
 
 '''
 
 import re
 
-version = '0.9.9.beta1'
+version = '0.9.9.beta2'
 
 # Recognized BibTeX keys; these keys will appear in the order given
 # when BibEntry.__repr()__ is called. Any other keys in an entry will
@@ -146,7 +146,8 @@ class BibEntry(dict):
 
     def __setitem__(self, key, val):
         '''Overloaded __setitem__() to ensure lowercase keys.'''
-        super().__setitem__(key.lower(), val)
+        # super() needs arguments here for Python 2 compatibility
+        super(BibEntry, self).__setitem__(key.lower(), val)
 
     def update(self, entries):
         '''Overloaded update() to ensure lowercase keys.'''
