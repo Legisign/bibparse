@@ -18,7 +18,7 @@
 
 import re
 
-version = '0.9.9.beta2'
+version = '1.0.0'
 
 # Recognized BibTeX keys; these keys will appear in the order given
 # when BibEntry.__repr()__ is called. Any other keys in an entry will
@@ -65,7 +65,7 @@ bibkeys = ('key',
 ### HELPER FUNCTIONS
 
 def to_bibtex(key, value):
-    '''Convert Python value to BibTeX string.'''
+    '''Convert Python list value to BibTeX string.'''
     if isinstance(value, list):
         if key.lower() == 'pages':
             value = '-'.join(value)
@@ -76,7 +76,7 @@ def to_bibtex(key, value):
     return value
 
 def to_python(key, value):
-    '''Convert BibTeX string to Python value.'''
+    '''Convert BibTeX string to a Python value.'''
     if key.lower() in ('author', 'editor', 'publisher', 'translator'):
         value = value.split(' and ')
     elif key.lower() == 'pages':
@@ -225,7 +225,7 @@ class BibParser(dict):
         return '\n\n'.join([repr(entry) for entry in sorted(self.values())])
 
     def by_regex(self, field, pattern):
-        '''Fetch all entries where field matches pattern.'''
+        '''Fetch all entries where field matches pattern (a regex).'''
         regex = re.compile(pattern)
         return BibParser(entries={k: v for k, v in self.items() \
                          if regex.search(str(v.get(field.lower(), '')))})

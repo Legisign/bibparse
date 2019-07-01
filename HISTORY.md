@@ -41,3 +41,4 @@
  * 2017-01-04  0.1.1.dev4    dev1 renaming propagated to by_type(), by_regex().
  * 2017-03-24  0.9.9.beta1   No changes: first beta.
  * 2018-07-05  0.9.9.beta2   One more Python2 compatibility change to super().
+ * 2019-07-01  1.0.0         First public version.
