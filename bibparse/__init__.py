@@ -1,18 +1,11 @@
 #!/usr/bin/env python3
 # -*- coding: UTF-8 -*-
-'''bibparse -- a BibTeX parser.
+'''bibparse -- read and write BibTeX files.
 
-  bibparse reads and writes BibTeX files.
+  Copyright © Legisign.org, Tommi Nieminen <software@legisign.org>
+  Licensed under GNU General Public License version 3 or later.
 
-  BibParser() is a special dict with added methods for parsing, reading,
-  writing and searching for BibTeX data. Each entry in the Bibliography is
-  another kind of special dict, BibEntry. Both define their own __repr__()
-  methods so they can be directly printed in BibTeX format.
-
-  Author:       Tommi Nieminen <software@legisign.org>
-  License:      GPL version 3 or later
-
-  2018-07-05  0.9.9.beta2   One more Python2 compatibility change to super().
+ 2019-07-01    1.0.0    First public version.
 
 '''
 
@@ -203,7 +196,7 @@ class BibEntry(dict):
                     key = val = ''
         return bibid, bibentry
 
-class BibParser(dict):
+class Bibliography(dict):
     '''Bibliography is a dict of BibEntries.'''
 
     def __init__(self, filename=None, entries=None):
@@ -325,13 +318,17 @@ if __name__ == '__main__':
 
     for arg in sys.argv[1:]:
         try:
-            db = BibParser(arg)
-        except (FileNotFoundError, PermissionError, IOError):
-            die('I/O-virhe: "{}"'.format(arg))
+            db = Bibliography(arg)
+        except FileNotFoundError:
+            die('File not found: "{}"'.format(arg))
+        except PermissionError:
+            die('Access denied: "{}”'.format(arg))
+        except IOError:
+            die('I/O error: "{}"'.format(arg))
         except DuplicateError as exc:
-            die('toistuva tunniste: "{}"'.format(exc.args[0]))
+            die('Duplicate ID: "{}"'.format(exc.args[0]))
         except NoIDError as exc:
-            die('puuttuva tunniste: "{}"'.format(exc.args[0]))
+            die('Missing ID: "{}"'.format(exc.args[0]))
         except PreambleError:
-            die('virheellinen @preamble')
+            die('Invalid @preamble')
         print(db)

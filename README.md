@@ -56,9 +56,9 @@ These are derived from `dict` but modified to ensure lower-case keys, reasonable
 
 * `parse(data)` -- parse string data into a BibTeX entry
 
-### 4. BibParser class
+### 4. Bibliography class
 
-The main class. Given an optional filename argument opens and parses the file and returns a `BibParser` object.
+The main class. The constructor can be given an optional filename argument; the file is opened and parsed automatically.
 
 #### 4.1  Methods
 
@@ -73,3 +73,7 @@ The main class. Given an optional filename argument opens and parses the file an
 * `parse(data)`  -- parse string as BibTeX data
 * `read(filename)` -- read and parse file as BibTeX data
 * `write(filename)` -- write file in BibTeX format
+
+`by_regex(field, regex)` searches the database by field values and returns the matches in a new `Bibliography` object. E.g., `by_regex('author', '.*Smith.*')` returns all entries where the "author" field contains "Smith".
+
+`by_types(bibtypes, complement=False)` searches the database by BibTeX types (given without the initial `"@"`) and returns the matches in a new `Bibliography` object. `bibtypes` can be a string specifying a single type (e.g., `"article"`) or a list of strings specifying several types (e.g., `["article", "book"]`). If the optional `complement` parameter is set to True, the function returns the complement, i.e., all entries **not** matching the criteria.
