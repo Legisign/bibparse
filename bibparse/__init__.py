@@ -6,15 +6,18 @@
   Licensed under GNU General Public License version 3 or later.
 
  2019-07-01    1.0.0    First public version.
+ 2019-07-17    1.1.0    Name changes: Bibliography > Biblio, BibEntry >
+                        BibItem. BibItem.update() acquires optional
+                        overwrite=bool parameter. Also small code changes.
 
 '''
 
 import re
 
-version = '1.0.0'
+version = '1.1.0'
 
 # Recognized BibTeX keys; these keys will appear in the order given
-# when BibEntry.__repr()__ is called. Any other keys in an entry will
+# when BibItem.__repr()__ is called. Any other keys in an entry will
 # appear in random order tailing these ones.
 bibkeys = ('key',
            'author',
@@ -84,7 +87,8 @@ def to_python(key, value):
 
 class BibError(Exception):
     '''Base class of bibparse errors'''
-    pass
+    def __init__(self, msg):
+        self.arg = msg
 
 class DuplicateError(BibError):
     '''Duplicate ID or preamble'''
@@ -100,8 +104,8 @@ class PreambleError(BibError):
 
 # BibTeX classes
 
-class BibEntry(dict):
-    '''BibEntry is a dict containing one BibTeX entry.'''
+class BibItem(dict):
+    '''BibItem is a dict containing one BibTeX entry.'''
 
     def __init__(self, bibid=None, bibtype=None, data=None):
         assert isinstance(data, (str, dict, type(None)))
@@ -116,7 +120,7 @@ class BibEntry(dict):
             if bibtype == 'preamble':
                 self.preamble = data
             else:
-                self.bibid, entry = BibEntry.parse(data)
+                self.bibid, entry = BibItem.parse(data)
                 self.update(entry)
 
     def __lt__(self, entry):
@@ -140,17 +144,22 @@ class BibEntry(dict):
     def __setitem__(self, key, val):
         '''Overloaded __setitem__() to ensure lowercase keys.'''
         # super() needs arguments here for Python 2 compatibility
-        super(BibEntry, self).__setitem__(key.lower(), val)
+        super(BibItem, self).__setitem__(key.lower(), val)
 
-    def update(self, entries):
-        '''Overloaded update() to ensure lowercase keys.'''
+    def update(self, fields, overwrite=True):
+        '''Update item using fields, overwriting old values by default.
+
+        Optional overwrite=False only adds nonexisting fields without
+        overwriting existing values.
+        '''
+        item = fields if overwrite else {k: v for k, v in fields.items() \
+                                         if k.lower() not in self}
         # super() needs arguments here for Python 2 compatibility
-        super(BibEntry, self).update({key.lower(): val \
-                                     for key, val in entries.items()})
+        super(BibItem, self).update({k.lower(): v  for k, v in item.items()})
 
     @staticmethod
     def parse(data):
-        '''Parse BibEntry data from a string.'''
+        '''Parse BibItem data from a string.'''
 
         def discard_comments(s):
             '''Discard all trailing comments from data.'''
@@ -178,7 +187,7 @@ class BibEntry(dict):
         except AttributeError:
             raise NoIDError(data)
         bibid = bibid.strip()
-        bibentry = {}
+        BibItem = {}
         next_is_key = True
         key = val = ''
         for c in keyvals:
@@ -191,13 +200,13 @@ class BibEntry(dict):
             else:
                 val += c
                 if c == '}' and val.count('{') == val.count('}'):
-                    bibentry[key] = to_python(key, val[1:-1])
+                    BibItem[key] = to_python(key, val[1:-1])
                     next_is_key = True
                     key = val = ''
-        return bibid, bibentry
+        return bibid, BibItem
 
-class Bibliography(dict):
-    '''Bibliography is a dict of BibEntries.'''
+class Biblio(dict):
+    '''Biblio is a dict of BibEntries.'''
 
     def __init__(self, filename=None, entries=None):
         self.filename = filename
@@ -208,7 +217,7 @@ class Bibliography(dict):
                 self.update(entries)
             elif isinstance(entries, (list, set)):
                 for entry in entries:
-                    if not isinstance(entry, BibEntry):
+                    if not isinstance(entry, BibItem):
                         raise ValueError(entry)
                     self[entry.bibid] = entry
             else:
@@ -220,27 +229,26 @@ class Bibliography(dict):
     def by_regex(self, field, pattern):
         '''Fetch all entries where field matches pattern (a regex).'''
         regex = re.compile(pattern)
-        return BibParser(entries={k: v for k, v in self.items() \
-                         if regex.search(str(v.get(field.lower(), '')))})
+        match = lambda what: regex.search(str(what.get(field.lower(), '')))
+        return Biblio(entries={k: v for k, v in self.items() if match(v)})
 
     def by_type(self, bibtypes, complement=False):
         '''Fetch all entries of given bibtype(s).'''
         if isinstance(bibtypes, str):
             bibtypes = {bibtypes}
-        if not complement:
-            f = lambda x, y: x in y
+        if complement:
+            match = lambda item: item.bibtype not in bibtypes
         else:
-            f = lambda x, y: x not in y
-        return BibParser(entries={k: v for k, v in self.items() \
-                         if f(v.bibtype, bibtypes)})
+            match = lambda item: item.bibtype in bibtypes
+        return Biblio(entries={k: v for k, v in self.items() if match(v)})
 
     def parse(self, buff):
-        '''Parse text buffer into a list of BibEntrys.'''
+        '''Parse text buffer into a list of BibItems.'''
         # state can be one of the following:
-        #   'wait' : wait for a bibentry (starts with “@”)
-        #   'type' : read bibentry type (“book” etc.)
+        #   'wait' : wait for a BibItem (starts with “@”)
+        #   'type' : read BibItem type (“book” etc.)
         #   'skip' : skip a trailing comment
-        #   'data' : read bibentry data (between braces)
+        #   'data' : read BibItem data (between braces)
         state = 'wait'
         itemtype = itemdata = ''
         for c in buff:
@@ -269,11 +277,11 @@ class Bibliography(dict):
                 if c == '}' and itemdata.count('{') == itemdata.count('}'):
                     if itemtype.lower() == 'preamble':
                         if '@preamble' in self:
-                            raise DuplicateError
-                        self['@preamble'] = BibEntry(bibtype='preamble',
+                            raise DuplicateError('@preamble')
+                        self['@preamble'] = BibItem(bibtype='preamble',
                                                      data=itemdata)
                     else:
-                        item = BibEntry(bibtype=itemtype, data=itemdata)
+                        item = BibItem(bibtype=itemtype, data=itemdata)
                         if item.bibid in self:
                             raise DuplicateError(item.bibid)
                         self[item.bibid] = item
@@ -296,11 +304,11 @@ class Bibliography(dict):
         if not filename:
             filename = self.filename
         with open(filename, 'w') as f:
+            if unordered:
+                f.write(repr(self))
             # Ensure decent ordering: first preamble, then not-collections,
             # then collections—because sometimes BibTeX can’t find crossrefs
             # unless they *follow* the reference
-            if unordered:
-                f.write(repr(self))
             else:
                 f.write(repr(self.by_type('preamble')))
                 f.write(repr(sorted(self.by_type(['preamble', 'collection'], \
@@ -318,7 +326,7 @@ if __name__ == '__main__':
 
     for arg in sys.argv[1:]:
         try:
-            db = Bibliography(arg)
+            db = Biblio(arg)
         except FileNotFoundError:
             die('File not found: "{}"'.format(arg))
         except PermissionError:
