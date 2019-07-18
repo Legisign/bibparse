@@ -4,7 +4,11 @@
 
 `bibparse` reads and writes BibTeX files.
 
-`BibParser()` is a special dict with added methods for parsing, reading, writing and searching for BibTeX data. Each entry in the `Bibliography` is another kind of special dict, `BibEntry`. Both define their own `__repr__()` methods so they can be directly printed in BibTeX format.
+The main class, `Biblio`, is a `dict` with methods for parsing, reading, writing and searching for BibTeX data. Each entry in the `Biblio` is another kind of special dict, `BibItem`. The user usually only needs to access `Biblio`.
+
+## Version
+
+Version 1.0.0 -- 18 July 2019.
 
 ## Copyrights
 
@@ -20,15 +24,17 @@ You should have received a copy of the GNU General Public License along with thi
 
 ### 1. Helper functions
 
+The values in some fields (namely author, editor, translator, publisher, address, and pages, all of which may have several names, locations, or other data in their values) of `BibItem` are stored internally as `list`s.
+
 * `to_bibtex(key, val)` -- convert an internal Python value into a BibTeX string
 * `to_python(key, val)` -- convert a BibTeX string into an internal Python value
 
-Both functions take a BibTeX `key` in order to decide, how to handle the value.
+Both functions take a BibTeX field name (key) in order to decide how to handle the value. Except for "pages" where the separator is a single dash "-", the separator is the string " and ", the leading and trailing whitespace included.
 
-For example converting Python values to BibTeX strings:
+Examples:
 
-* `key` = "pages", val = [100, 110] → "100-110"
-* `key` = "address", val = ["London", "New York"] → "London and New York"
+*   `to_bibtex('pages', [100, 110])` →  '100-110'
+*   `to_python('address', 'London and New York')` → ['London', 'New York']
 
 ### 2. Exceptions
 
@@ -37,7 +43,7 @@ For example converting Python values to BibTeX strings:
     * `NoIDError` -- missing ID in an entry
     * `PreambleError` -- invalid preamble
 
-### 3. BibEntry class
+### 3. BibItem class
 
 A `dict`-derived object representing a single BibTeX entry.
 
@@ -52,11 +58,13 @@ These are derived from `dict` but modified to ensure lower-case keys, reasonable
 * `__setitem__()`
 * `update()`
 
+`update()` has an additional optional `overwrite=bool` parameter. If `True` (the default), `update()` functions exactly like `dict.update()`, updating BibItem contents from data in the supplied `dict`. If `False`, only new keys in supplied data is added but existing values are not overwritten.
+
 ##### 3.1.2 New method
 
 * `parse(data)` -- parse string data into a BibTeX entry
 
-### 4. Bibliography class
+### 4. Biblio class
 
 The main class. The constructor can be given an optional filename argument; the file is opened and parsed automatically.
 
@@ -66,6 +74,8 @@ The main class. The constructor can be given an optional filename argument; the 
 
 * `__repr__()`
 
+`__repr__()` produces BibTeX-compatible representation of the data so that conversion to string is easily done with `str()`.
+
 ##### 4.1.2 New methods
 
 * `by_regex(field, regex)` -- search in field by regex
@@ -74,6 +84,6 @@ The main class. The constructor can be given an optional filename argument; the 
 * `read(filename)` -- read and parse file as BibTeX data
 * `write(filename)` -- write file in BibTeX format
 
-`by_regex(field, regex)` searches the database by field values and returns the matches in a new `Bibliography` object. E.g., `by_regex('author', '.*Smith.*')` returns all entries where the "author" field contains "Smith".
+`by_regex(field, regex)` searches the database by field values and returns the matches in a new `Biblio` object. E.g., `by_regex('author', '.*Smith.*')` returns all entries where the "author" field contains "Smith".
 
-`by_types(bibtypes, complement=False)` searches the database by BibTeX types (given without the initial `"@"`) and returns the matches in a new `Bibliography` object. `bibtypes` can be a string specifying a single type (e.g., `"article"`) or a list of strings specifying several types (e.g., `["article", "book"]`). If the optional `complement` parameter is set to True, the function returns the complement, i.e., all entries **not** matching the criteria.
+`by_types(bibtypes, complement=False)` searches the database by BibTeX types (given without the initial `"@"`) and returns the matches in a new `Biblio` object. `bibtypes` can be a string specifying a single type (e.g., `"article"`) or a list of strings specifying several types (e.g., `["article", "book"]`). If the optional `complement` parameter is set to True, the function returns the complement, i.e., all entries **not** matching the criteria.

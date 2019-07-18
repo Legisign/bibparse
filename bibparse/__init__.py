@@ -2,19 +2,22 @@
 # -*- coding: UTF-8 -*-
 '''bibparse -- read and write BibTeX files.
 
+  bibparse is a BibTeX parsing module for Python 3 (and, far less
+  enthusiastically, for Python 2).
+
+  NOTE: Some super() calls could be simplified if it were sure no call is
+  ever made from Python 2.
+
   Copyright © Legisign.org, Tommi Nieminen <software@legisign.org>
   Licensed under GNU General Public License version 3 or later.
 
- 2019-07-01    1.0.0    First public version.
- 2019-07-17    1.1.0    Name changes: Bibliography > Biblio, BibEntry >
-                        BibItem. BibItem.update() acquires optional
-                        overwrite=bool parameter. Also small code changes.
+  2019-07-18  1.0.0  Finally there.
 
 '''
 
 import re
 
-version = '1.1.0'
+version = '1.0.0'
 
 # Recognized BibTeX keys; these keys will appear in the order given
 # when BibItem.__repr()__ is called. Any other keys in an entry will
@@ -152,6 +155,8 @@ class BibItem(dict):
         Optional overwrite=False only adds nonexisting fields without
         overwriting existing values.
         '''
+        if not isinstance(fields, dict):
+            raise TypeError
         item = fields if overwrite else {k: v for k, v in fields.items() \
                                          if k.lower() not in self}
         # super() needs arguments here for Python 2 compatibility

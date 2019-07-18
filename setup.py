@@ -18,8 +18,7 @@
   You should have received a copy of the GNU General Public License
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-  2019-07-01 setup.py created, packaging underway.
-  2019-07-17 BibEntry.update() acquires overwrite=bool parameter.
+  2019-07-18  Finally going for PyPI.
 
 '''
 
@@ -29,7 +28,7 @@ with open('README.md', 'r') as readme:
     long_description = readme.read()
 
 setuptools.setup(name='bibparse',
-                 version='1.1.0',
+                 version='1.0.0',
                  description='Read and write BibTeX files',
                  long_description=long_description,
                  long_description_content_type='text/markdown',
