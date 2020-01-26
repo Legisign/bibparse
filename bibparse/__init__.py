@@ -11,13 +11,14 @@
   Copyright © Legisign.org, Tommi Nieminen <software@legisign.org>
   Licensed under GNU General Public License version 3 or later.
 
-  2019-07-18  1.0.0  Finally there.
+  2019-07-18    1.0.0   Finally there.
+  2020-01-26    1.1.0   bibkeys updated.
 
 '''
 
 import re
 
-version = '1.0.0'
+version = '1.1.0'
 
 # Recognized BibTeX keys; these keys will appear in the order given
 # when BibItem.__repr()__ is called. Any other keys in an entry will
@@ -25,15 +26,14 @@ version = '1.0.0'
 bibkeys = ('key',
            'author',
            'title',
-           'subtitle',
-           'origtitle',
-           'translator',
+           'subtitle',              # semi-standard
+           'origtitle',             # non-standard
+           'translator',            # semi-standard
            'crossref',
            'editor',
            'booktitle',
-           'booksubtitle',
-           'origbooktitle',
-           'chapter',
+           'booksubtitle',          # non-standard
+           'origbooktitle',         # non-standard
            'journal',
            'series',
            'volume',
@@ -44,22 +44,22 @@ bibkeys = ('key',
            'school',
            'publisher',
            'address',
-           'pubstate',
+           'pubstate',              # semi-standard
            'howpublished',
-           'url',
-           'urldate',
-           'doi',
+           'url',                   # semi-standard
+           'urldate',               # semi-standard
+           'doi',                   # semi-standard
            'month',
            'year',
            'pubyear',
+           'chapter',
            'pages',
-           'isbn',
-           'issn',
+           'isbn',                  # semi-standard
+           'issn',                  # semi-standard
            'annote',
-           'eprint',
            'type',
            'note',
-           'keywords')
+           'keywords')              # semi-standard
 
 ### HELPER FUNCTIONS
 
