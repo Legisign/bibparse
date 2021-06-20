@@ -254,7 +254,7 @@ class Biblio(dict):
         '''Return self[key] if key in self, else return default.
 
         Provides special handling for key == 'bibid'.'''
-        return super().get(key, default) if key == 'bibid' else self.bibid
+        return super().get(key, default) if key != 'bibid' else self.bibid
 
     def parse(self, buff):
         '''Parse text buffer into a list of BibItems.'''
