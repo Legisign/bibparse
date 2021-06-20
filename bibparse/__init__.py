@@ -11,14 +11,17 @@
   Copyright © Legisign.org, Tommi Nieminen <software@legisign.org>
   Licensed under GNU General Public License version 3 or later.
 
-  2019-07-18    1.0.0   Finally there.
-  2020-01-26    1.1.0   bibkeys updated.
+  2019-07-18  1.0.0         Finally there.
+  2020-01-26  1.1.0         bibkeys updated.
+  2021-06-19  1.2.0.dev1    Changed BibItem.get() to handle 'bibid' key
+                            specially, as if it was a key/value pair even
+                            while it is a special property of the dict.
 
 '''
 
 import re
 
-version = '1.1.0'
+version = '1.2.0.dev1'
 
 # Recognized BibTeX keys; these keys will appear in the order given
 # when BibItem.__repr()__ is called. Any other keys in an entry will
@@ -246,6 +249,12 @@ class Biblio(dict):
         else:
             match = lambda item: item.bibtype in bibtypes
         return Biblio(entries={k: v for k, v in self.items() if match(v)})
+
+    def get(self, key, default=None):
+        '''Return self[key] if key in self, else return default.
+
+        Provides special handling for key == 'bibid'.'''
+        return super().get(key, default) if key == 'bibid' else self.bibid
 
     def parse(self, buff):
         '''Parse text buffer into a list of BibItems.'''
