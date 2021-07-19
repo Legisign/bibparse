@@ -8,6 +8,14 @@ In August 2016 I switched to using PyPI-compatible version numbering scheme in o
 
 1 July 2019 was declared as the first “public” version (“1.0.0”), yet I continued to make bug fixes. During the next two weeks I made several semi-major changes to the code so the “1.0.0” moniker was clearly premature.
 
-## PyPI 1.0.0 (2019-07-18)
+## 1.2.0 (2021-07-19)
+
+Lots of internal changes **including** the possibility the use "..." for the BibTeX fields. Python 2 compatibility hacks discarded. f-strings utilized.
+
+## 1.1.0 (2020-01-26)
+
+`bibkeys` updated.
+
+## 1.0.0 (2019-07-18)
 
 Finally there.

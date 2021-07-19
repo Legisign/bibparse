@@ -6,13 +6,15 @@
 
 The main class, `Biblio`, is a `dict` with methods for parsing, reading, writing and searching for BibTeX data. Each entry in the `Biblio` is another kind of special dict, `BibItem`. The user usually only needs to access `Biblio`.
 
-## Version
+**NOTE** Just because I use only `{...}` myself, I’ve never thought of adding the more traditional `"..."` field marking before version 1.2.*.
 
-Version 1.0.0 -- 18 July 2019.
+## Current version
+
+Version 1.2.0 -- 19 July 2021.
 
 ## Copyrights
 
-Copyright © 2019 Legisign.org, Tommi Nieminen <software@legisign.org>
+Copyright © 2019–2021 Legisign.org <mailto:software@legisign.org>
 
 This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
 

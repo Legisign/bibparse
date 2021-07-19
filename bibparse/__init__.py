@@ -2,26 +2,25 @@
 # -*- coding: UTF-8 -*-
 '''bibparse -- read and write BibTeX files.
 
-  bibparse is a BibTeX parsing module for Python 3 (and, far less
-  enthusiastically, for Python 2).
+  bibparse is a BibTeX parsing module for Python.
 
-  NOTE: Some super() calls could be simplified if it were sure no call is
-  ever made from Python 2.
+  NOTE: Some Python 2 incompatibilities exist since 1.2.0.dev2.
 
-  Copyright © Legisign.org, Tommi Nieminen <software@legisign.org>
+  Copyright © 2019–2021 Legisign.org
   Licensed under GNU General Public License version 3 or later.
 
-  2019-07-18  1.0.0         Finally there.
-  2020-01-26  1.1.0         bibkeys updated.
   2021-06-19  1.2.0.dev1    Changed BibItem.get() to handle 'bibid' key
                             specially, as if it was a key/value pair even
                             while it is a special property of the dict.
+  2021-07-19  1.2.0.dev2    Changed to f-strings. Removing Python 2
+                            compatibility bits.
 
 '''
 
 import re
+import enum
 
-version = '1.2.0.dev1'
+version = '1.2.0.dev2'
 
 # Recognized BibTeX keys; these keys will appear in the order given
 # when BibItem.__repr()__ is called. Any other keys in an entry will
@@ -108,6 +107,16 @@ class PreambleError(BibError):
     '''Invalid preamble'''
     pass
 
+# Helper class
+
+class State(enum.Enum):
+    '''Parser states.'''
+    WAIT = enum.auto()  # waiting for @
+    TYPE = enum.auto()  # reading bibtype string
+    SKIP = enum.auto()  # skipping characters
+    ITEM = enum.auto()  # waiting record ({...})
+    DATA = enum.auto()  # waiting field (either {...} or "...")
+
 # BibTeX classes
 
 class BibItem(dict):
@@ -137,20 +146,19 @@ class BibItem(dict):
     def __repr__(self):
         global bibkeys
         if self.bibtype == 'preamble':
-            ret = '@preamble{{{}}}'.format(self.preamble)
+            ret = f'@preamble{{{self.preamble}}}'
         else:
-            buff = ['@{}{{{}'.format(self.bibtype, self.bibid)] + \
-                   ['    {} = {{{}}}'.format(key, to_bibtex(key, self[key])) \
+            buff = [f'@{self.bibtype}{{{self.bibid}'] + \
+                   [f'    {key} = {{{to_bibtex(key, self[key])}}}' \
                        for key in bibkeys if key in self] + \
-                   ['    {} = {{{}}}'.format(key, val) \
+                   [f'    {key} = {{{val}}}' \
                        for key, val in self.items() if key not in bibkeys]
             ret = ',\n'.join(buff) + '\n}'
         return ret
 
     def __setitem__(self, key, val):
         '''Overloaded __setitem__() to ensure lowercase keys.'''
-        # super() needs arguments here for Python 2 compatibility
-        super(BibItem, self).__setitem__(key.lower(), val)
+        super().__setitem__(key.lower(), val)
 
     def update(self, fields, overwrite=True):
         '''Update item using fields, overwriting old values by default.
@@ -162,8 +170,7 @@ class BibItem(dict):
             raise TypeError
         item = fields if overwrite else {k: v for k, v in fields.items() \
                                          if k.lower() not in self}
-        # super() needs arguments here for Python 2 compatibility
-        super(BibItem, self).update({k.lower(): v  for k, v in item.items()})
+        super().update({k.lower(): v  for k, v in item.items()})
 
     @staticmethod
     def parse(data):
@@ -202,12 +209,12 @@ class BibItem(dict):
             if next_is_key:
                 if c.isalnum():
                     key += c
-                elif c == '{':
+                elif c in '{"':
                     next_is_key = False
                     val = c
             else:
                 val += c
-                if c == '}' and val.count('{') == val.count('}'):
+                if c == '"' or (c == '}' and val.count('{') == val.count('}')):
                     BibItem[key] = to_python(key, val[1:-1])
                     next_is_key = True
                     key = val = ''
@@ -258,48 +265,45 @@ class Biblio(dict):
 
     def parse(self, buff):
         '''Parse text buffer into a list of BibItems.'''
-        # state can be one of the following:
-        #   'wait' : wait for a BibItem (starts with “@”)
-        #   'type' : read BibItem type (“book” etc.)
-        #   'skip' : skip a trailing comment
-        #   'data' : read BibItem data (between braces)
-        state = 'wait'
+        state = State.WAIT
         itemtype = itemdata = ''
         for c in buff:
-            if state == 'skip':
+            if state == State.SKIP:
                 if c == '\n':
                     state = previous_state
-            elif state == 'wait':
+            elif state == State.WAIT:
                 if c == '@':
-                    state = 'type'
-                elif c == '{':
-                    state = 'data'
+                    state = State.TYPE
+                elif c in '{"':
+                    state = State.DATA
                 elif c == '%':
                     previous_state = state
-                    state = 'skip'
-            elif state == 'type':
+                    state = State.SKIP
+            elif state == State.TYPE:
                 if c.isalpha():
                     itemtype += c.lower()
-                elif c.isspace():
-                    state = 'wait'
+                elif c == ',' or c.isspace():
+                    state = State.WAIT
                 elif c == '{':
-                    state = 'data'
+                    state = State.DATA
                 elif c == '%':
                     previous_state = state
-                    state = 'skip'
-            elif state == 'data':
+                    state = State.SKIP
+            elif state == State.DATA:
                 if c == '}' and itemdata.count('{') == itemdata.count('}'):
                     if itemtype.lower() == 'preamble':
                         if '@preamble' in self:
                             raise DuplicateError('@preamble')
                         self['@preamble'] = BibItem(bibtype='preamble',
-                                                     data=itemdata)
+                                                    data=itemdata)
+                    elif itemtype.lower() == 'string':
+                        pass
                     else:
                         item = BibItem(bibtype=itemtype, data=itemdata)
                         if item.bibid in self:
                             raise DuplicateError(item.bibid)
                         self[item.bibid] = item
-                    state = 'wait'
+                    state = State.WAIT
                     itemtype = itemdata = ''
                 else:
                     itemdata += c
@@ -334,23 +338,22 @@ if __name__ == '__main__':
     import sys
 
     def die(msg):
-        # Can’t use print('…', file=…) here if called from Python 2
-        sys.stderr.write(msg + '\n')
+        print(f'{msg}\n', file=sys.stderr)
         sys.exit(1)
 
     for arg in sys.argv[1:]:
         try:
             db = Biblio(arg)
         except FileNotFoundError:
-            die('File not found: "{}"'.format(arg))
+            die(f'File not found: "{arg}"')
         except PermissionError:
-            die('Access denied: "{}”'.format(arg))
+            die(f'Access denied: "{arg}”')
         except IOError:
-            die('I/O error: "{}"'.format(arg))
+            die(f'I/O error: "{arg}"')
         except DuplicateError as exc:
-            die('Duplicate ID: "{}"'.format(exc.args[0]))
+            die(f'Duplicate ID: "{exc.args[0]}"')
         except NoIDError as exc:
-            die('Missing ID: "{}"'.format(exc.args[0]))
+            die(f'Missing ID: "{exc.args[0]}"')
         except PreambleError:
             die('Invalid @preamble')
         print(db)
