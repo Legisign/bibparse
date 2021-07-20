@@ -14,13 +14,15 @@
                             while it is a special property of the dict.
   2021-07-19  1.2.0.dev2    Changed to f-strings. Removing Python 2
                             compatibility bits.
+  2021-07-20  1.2.0.dev3    Completely rewritten parsers. No regexes but
+                            `enum` states. @comment and @string still do not
+                            work and error line numbers get amiss.
 
 '''
 
-import re
 import enum
 
-version = '1.2.0.dev2'
+version = '1.2.0.dev3'
 
 # Recognized BibTeX keys; these keys will appear in the order given
 # when BibItem.__repr()__ is called. Any other keys in an entry will
@@ -62,6 +64,9 @@ bibkeys = ('key',
            'type',
            'note',
            'keywords')              # semi-standard
+special_types = ('comment',
+                 'preamble',
+                 'string')
 
 ### HELPER FUNCTIONS
 
@@ -92,8 +97,13 @@ def to_python(key, value):
 
 class BibError(Exception):
     '''Base class of bibparse errors'''
-    def __init__(self, msg):
-        self.arg = msg
+    def __init__(self, lineno, msg):
+        self.lineno = lineno
+        self.err = msg
+
+class ParseError(BibError):
+    '''Parse error.'''
+    pass
 
 class DuplicateError(BibError):
     '''Duplicate ID or preamble'''
@@ -103,37 +113,48 @@ class NoIDError(BibError):
     '''No ID in an entry'''
     pass
 
-class PreambleError(BibError):
-    '''Invalid preamble'''
-    pass
-
 # Helper class
 
-class State(enum.Enum):
-    '''Parser states.'''
-    WAIT = enum.auto()  # waiting for @
-    TYPE = enum.auto()  # reading bibtype string
-    SKIP = enum.auto()  # skipping characters
-    ITEM = enum.auto()  # waiting record ({...})
-    DATA = enum.auto()  # waiting field (either {...} or "...")
+class ParserState(enum.Enum):
+    '''File-level parser states.'''
+    AT = enum.auto()        # waiting for at sign (@)
+    TYPE = enum.auto()      # reading bibtype string
+    SKIP = enum.auto()      # skipping characters
+    DATA = enum.auto()      # waiting field (either {...} or "...")
+
+class ItemParserState(enum.Enum):
+    '''Item-level parser states.'''
+    SKIP = enum.auto()      # skipping whitespace
+    ID = enum.auto()        # reading bibid
+    COMMA = enum.auto()     # waiting comma (or end of record)
+    KEY = enum.auto()       # reading key
+    EQUALS = enum.auto()    # waiting equals sign (=)
+    SEPAR = enum.auto()     # waiting value separator ({ or ")
+    VALUE = enum.auto()     # reading value
 
 # BibTeX classes
 
 class BibItem(dict):
     '''BibItem is a dict containing one BibTeX entry.'''
 
-    def __init__(self, bibid=None, bibtype=None, data=None):
-        assert isinstance(data, (str, dict, type(None)))
+    def __init__(self, bibid=None, bibtype=None, data=None, rawdata=None):
+        if data is not None:
+            assert isinstance(data, dict)
+        if rawdata is not None:
+            assert isinstance(rawdata, str)
         self.bibid = bibid
         self.bibtype = bibtype
         self.preamble = None
-        if isinstance(data, dict):
-            if bibtype == 'preamble':
-                raise PreambleError(data)
+        # self.strings = {}
+        if data:
             self.update(data)
-        elif isinstance(data, str):
+        if rawdata:
             if bibtype == 'preamble':
-                self.preamble = data
+                self.preamble = rawdata
+            elif bibtype == 'string':
+                pass
+            elif bibtype == 'comment':
+                pass
             else:
                 self.bibid, entry = BibItem.parse(data)
                 self.update(entry)
@@ -146,6 +167,7 @@ class BibItem(dict):
     def __repr__(self):
         global bibkeys
         if self.bibtype == 'preamble':
+            # print(f'BibItem.__repr__(): "{self.preamble}"')
             ret = f'@preamble{{{self.preamble}}}'
         else:
             buff = [f'@{self.bibtype}{{{self.bibid}'] + \
@@ -161,64 +183,94 @@ class BibItem(dict):
         super().__setitem__(key.lower(), val)
 
     def update(self, fields, overwrite=True):
-        '''Update item using fields, overwriting old values by default.
-
-        Optional overwrite=False only adds nonexisting fields without
-        overwriting existing values.
-        '''
+        '''Update item using fields, overwriting old values by default.'''
         if not isinstance(fields, dict):
             raise TypeError
-        item = fields if overwrite else {k: v for k, v in fields.items() \
-                                         if k.lower() not in self}
+        if not overwrite:
+            item = {k: v for k, v in item.fields() if k.lower() not in self}
+        else:
+            item = fields
         super().update({k.lower(): v  for k, v in item.items()})
 
     @staticmethod
-    def parse(data):
+    def parse(data, lineno=1):
         '''Parse BibItem data from a string.'''
-
-        def discard_comments(s):
-            '''Discard all trailing comments from data.'''
-            buff = s.split('\n')
-            for lineno, line in enumerate(buff):
-                if '%' in line:
-                    in_quotes = False
-                    braces = 0
-                    for col, c in enumerate(line):
-                        if c == '"':
-                            in_quotes = not in_quotes
-                        elif c == '{':
-                            braces += 1
-                        elif c == '}':
-                            braces -= 1
-                        elif c == '%' and not in_quotes and not braces:
-                            buff[lineno] = line[:col]
-                            break
-            return ' '.join(buff)
-
-        data = discard_comments(data)
-        bibid_pat = re.compile(r'^\s*([^,]+)\s*,\s*(.*)\s*$')
-        try:
-            bibid, keyvals = bibid_pat.match(data).groups()
-        except AttributeError:
-            raise NoIDError(data)
-        bibid = bibid.strip()
-        BibItem = {}
-        next_is_key = True
-        key = val = ''
-        for c in keyvals:
-            if next_is_key:
-                if c.isalnum():
-                    key += c
-                elif c in '{"':
-                    next_is_key = False
-                    val = c
-            else:
-                val += c
-                if c == '"' or (c == '}' and val.count('{') == val.count('}')):
-                    BibItem[key] = to_python(key, val[1:-1])
-                    next_is_key = True
-                    key = val = ''
-        return bibid, BibItem
+        state = ItemParserState.SKIP
+        next_state = ItemParserState.ID
+        bibid = None
+        curr_key = ''
+        curr_value = ''
+        brackets = 0
+        item = {}
+        for c in data:
+            # print(c, end='')
+            if c == '\n':
+                lineno += 1
+            if state == ItemParserState.SKIP:
+                if c in '{"' and next_state == ItemParserState.VALUE:
+                    # print(f'SKIP -> VALUE [-> COMMA]')
+                    state = ItemParserState.VALUE
+                    next_state = ItemParserState.COMMA
+                elif not c.isspace():
+                    # print(f'*SKIP -> {next_state.name} [-> SKIP]')
+                    state = next_state
+                    next_state = ItemParserState.SKIP
+                    curr_key = c
+            elif state == ItemParserState.ID:
+                if c == ',':
+                    state = ItemParserState.SKIP
+                    next_state = ItemParserState.KEY
+                    bibid = curr_key
+                    curr_key = ''
+                    # print(f'ID ("{bibid}") ->> SKIP [-> KEY]')
+                elif not c.isspace():
+                    curr_key += c
+                else:
+                    state = ItemParserState.COMMA
+                    next_state = ItemParserState.KEY
+                    bibid = curr_key
+                    curr_key = ''
+                    # print(f'ID ("{bibid}") -> COMMA [-> KEY]')
+            elif state == ItemParserState.COMMA:
+                if c == ',':
+                    # print(f'COMMA -> SKIP [-> KEY]')
+                    state = ItemParserState.SKIP
+                    next_state = ItemParserState.KEY
+                elif not c.isspace():
+                    raise ParseError(lineno, c)
+            elif state == ItemParserState.KEY:
+                if c.isspace():
+                    # print(f'KEY ("{curr_key}") -> EQUALS [-> VALUE]')
+                    state = ItemParserState.EQUALS
+                    next_state = ItemParserState.VALUE
+                elif c == '=':
+                    # print(f'KEY ("{curr_key}") ->> SKIP [-> VALUE] ')
+                    state = ItemParserState.SKIP
+                    next_state = ItemParserState.VALUE
+                else:
+                    curr_key += c
+            elif state == ItemParserState.EQUALS:
+                if c == '=':
+                    # print(f'EQUALS -> SKIP [-> VALUE]')
+                    state = ItemParserState.SKIP
+                    next_state = ItemParserState.VALUE
+                elif not c.isspace():
+                    raise ParseError(lineno, c)
+            elif state == ItemParserState.VALUE:
+                if c == '{':
+                    brackets += 1
+                elif c == '}' and brackets > 0:
+                    brackets -= 1
+                elif c == '"' or (c == '}' and brackets == 0):
+                    # print(f'VALUE ("{curr_value}") -> COMMA [-> KEY]')
+                    state = ItemParserState.COMMA
+                    next_state = ItemParserState.KEY
+                    item[curr_key] = curr_value
+                    curr_key = ''
+                    curr_value = ''
+                else:
+                    curr_value += c
+        return BibItem(bibid=bibid, data=item)
 
 class Biblio(dict):
     '''Biblio is a dict of BibEntries.'''
@@ -239,6 +291,7 @@ class Biblio(dict):
                 raise ValueError(entries)
 
     def __repr__(self):
+        # return '\n\n'.join([repr(entry) for entry in self.values()])
         return '\n\n'.join([repr(entry) for entry in sorted(self.values())])
 
     def by_regex(self, field, pattern):
@@ -265,54 +318,70 @@ class Biblio(dict):
 
     def parse(self, buff):
         '''Parse text buffer into a list of BibItems.'''
-        state = State.WAIT
-        itemtype = itemdata = ''
+        global special_types
+        state = ParserState.AT
+        next_state = ParserState.TYPE
+        curr_type = ''
+        curr_data = ''
+        line = 1
         for c in buff:
-            if state == State.SKIP:
-                if c == '\n':
-                    state = previous_state
-            elif state == State.WAIT:
-                if c == '@':
-                    state = State.TYPE
-                elif c in '{"':
-                    state = State.DATA
-                elif c == '%':
-                    previous_state = state
-                    state = State.SKIP
-            elif state == State.TYPE:
+            # print(c, end='')
+            if c == '\n':
+                line += 1
+            if state == ParserState.AT and c == '@':
+                # print(f'AT -> {next_state.name} [-> SKIP]')
+                state = next_state
+                next_state = ParserState.SKIP
+            elif state == ParserState.TYPE:
                 if c.isalpha():
-                    itemtype += c.lower()
-                elif c == ',' or c.isspace():
-                    state = State.WAIT
+                    curr_type += c
+                elif c.isspace():
+                    # print(f'TYPE ("{curr_type}") -> {next_state.name} [-> DATA]')
+                    state = next_state
+                    next_state = ParserState.DATA
                 elif c == '{':
-                    state = State.DATA
-                elif c == '%':
-                    previous_state = state
-                    state = State.SKIP
-            elif state == State.DATA:
-                if c == '}' and itemdata.count('{') == itemdata.count('}'):
-                    if itemtype.lower() == 'preamble':
-                        if '@preamble' in self:
-                            raise DuplicateError('@preamble')
-                        self['@preamble'] = BibItem(bibtype='preamble',
-                                                    data=itemdata)
-                    elif itemtype.lower() == 'string':
-                        pass
-                    else:
-                        item = BibItem(bibtype=itemtype, data=itemdata)
-                        if item.bibid in self:
-                            raise DuplicateError(item.bibid)
-                        self[item.bibid] = item
-                    state = State.WAIT
-                    itemtype = itemdata = ''
+                    # print(f'TYPE ("{curr_type}") ->> DATA [-> AT]')
+                    brackets = 1
+                    state = ParserState.DATA
+                    next_state = ParserState.AT
                 else:
-                    itemdata += c
+                    raise ParseError(line, c)
+            elif state == ParserState.SKIP and  c == '{':
+                # print(f'SKIP -> DATA [-> AT]')
+                brackets = 1
+                state = ParserState.DATA
+                next_state = ParserState.AT
+            elif state == ParserState.DATA:
+                if c == '}':
+                    brackets -= 1
+                    if brackets == 0:
+                        # print(f'DATA -> {next_state.name} [-> TYPE]')
+                        # print(f'data = "{curr_data}"')
+                        if curr_type not in special_types:
+                            item = BibItem.parse(curr_data, line)
+                            item.bibtype = curr_type
+                            self[item.bibid] = item
+                        elif curr_type == 'preamble':
+                            # print(f'curr_data = "{curr_data}"')
+                            item = BibItem(bibtype='preamble', rawdata=curr_data)
+                            # print(f'item.preamble = "{item.preamble}"')
+                            self[item.bibid] = item
+                        state = next_state
+                        next_state = ParserState.TYPE
+                        curr_type = ''
+                        curr_data = ''
+                    else:
+                        curr_data += c
+                else:
+                    if c == '{':
+                        brackets += 1
+                    curr_data += c
 
     def read(self, filename):
         '''Read and parse a BibTeX file.'''
         self.filename = filename
         with open(filename, 'r') as f:
-            buff = ' '.join([line for line in f])
+            buff = ''.join([line for line in f])
         self.parse(buff)
 
     def write(self, filename=None, unordered=False):
@@ -341,19 +410,19 @@ if __name__ == '__main__':
         print(f'{msg}\n', file=sys.stderr)
         sys.exit(1)
 
-    for arg in sys.argv[1:]:
+    for name in sys.argv[1:]:
         try:
-            db = Biblio(arg)
+            db = Biblio(name)
         except FileNotFoundError:
-            die(f'File not found: "{arg}"')
+            die(f'File not found: "{name}"')
         except PermissionError:
-            die(f'Access denied: "{arg}”')
+            die(f'Access denied: "{name}”')
         except IOError:
-            die(f'I/O error: "{arg}"')
+            die(f'I/O error: "{name}"')
+        except ParseError as exc:
+            die(f'Parse error on line {exc.lineno}: {exc.err}')
         except DuplicateError as exc:
-            die(f'Duplicate ID: "{exc.args[0]}"')
+            die(f'Duplicate ID on line {exc.lineno}: "{exc.err}"')
         except NoIDError as exc:
-            die(f'Missing ID: "{exc.args[0]}"')
-        except PreambleError:
-            die('Invalid @preamble')
+            die(f'Missing ID on line {exc.lineno}: "{exc.err}"')
         print(db)
