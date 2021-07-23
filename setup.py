@@ -4,7 +4,7 @@
 
   bibparse -- read and write BibTeX files.
 
-  Copyright © 2019 Legisign.org, Tommi Nieminen <software@legisign.org>
+  Copyright © 2019–2021 Legisign.org <software@legisign.org>
 
   This program is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -29,7 +29,7 @@ with open('README.md', 'r') as readme:
     long_description = readme.read()
 
 setuptools.setup(name='bibparse',
-                 version='1.2.0.dev1',
+                 version='1.2.0.dev3',
                  description='Read and write BibTeX files',
                  long_description=long_description,
                  long_description_content_type='text/markdown',
