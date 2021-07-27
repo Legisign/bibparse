@@ -29,7 +29,7 @@ with open('README.md', 'r') as readme:
     long_description = readme.read()
 
 setuptools.setup(name='bibparse',
-                 version='1.2.0.dev3',
+                 version='1.2.0.dev7',
                  description='Read and write BibTeX files',
                  long_description=long_description,
                  long_description_content_type='text/markdown',

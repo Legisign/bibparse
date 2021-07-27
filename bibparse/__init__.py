@@ -17,12 +17,18 @@
   2021-07-20  1.2.0.dev3    Completely rewritten parsers. No regexes but
                             `enum` states. @comment and @string still do not
                             work and error line numbers get amiss.
+  2021-07-23  1.2.0.dev4    New Biblio.gets() method.
+  2021-07-24  1.2.0.dev5    Oops, what’s needed is BibItem.gets().
+  2021-07-27  1.2.0.dev6    Still need re for Biblio.by_regex()!
+  2021-07-27  1.2.0.dev7    Added Biblio.by_bibid() in order to make writing
+                            bibgrep easier.
 
 '''
 
+import re
 import enum
 
-version = '1.2.0.dev3'
+version = '1.2.0.dev7'
 
 # Recognized BibTeX keys; these keys will appear in the order given
 # when BibItem.__repr()__ is called. Any other keys in an entry will
@@ -182,15 +188,20 @@ class BibItem(dict):
         '''Overloaded __setitem__() to ensure lowercase keys.'''
         super().__setitem__(key.lower(), val)
 
+    def gets(self, key):
+        '''Get key value as a BibTeX-formatted string, or the empty string.'''
+        return to_bibtex(key, self.get(key, ''))
+
     def update(self, fields, overwrite=True):
         '''Update item using fields, overwriting old values by default.'''
         if not isinstance(fields, dict):
             raise TypeError
         if not overwrite:
-            item = {k: v for k, v in item.fields() if k.lower() not in self}
+            item = {key.lower(): val for key, val in fields.items() \
+                    if key.lower() not in self}
         else:
             item = fields
-        super().update({k.lower(): v  for k, v in item.items()})
+        super().update({key.lower(): val  for key, val in item.items()})
 
     @staticmethod
     def parse(data, lineno=1):
@@ -294,10 +305,14 @@ class Biblio(dict):
         # return '\n\n'.join([repr(entry) for entry in self.values()])
         return '\n\n'.join([repr(entry) for entry in sorted(self.values())])
 
+    def by_bibid(self, bibids):
+        '''Fetch all entries whose bibid is in the given list.'''
+        return Biblio(entries={k: v for k, v in self.items() if k in bibids})
+
     def by_regex(self, field, pattern):
         '''Fetch all entries where field matches pattern (a regex).'''
         regex = re.compile(pattern)
-        match = lambda what: regex.search(str(what.get(field.lower(), '')))
+        match = lambda what: regex.search(what.gets(field.lower()))
         return Biblio(entries={k: v for k, v in self.items() if match(v)})
 
     def by_type(self, bibtypes, complement=False):
