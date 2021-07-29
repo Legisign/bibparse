@@ -9,26 +9,29 @@
   Copyright © 2019–2021 Legisign.org
   Licensed under GNU General Public License version 3 or later.
 
-  2021-06-19  1.2.0.dev1    Changed BibItem.get() to handle 'bibid' key
+  2021-06-19  1.2.0-dev.1   Changed BibItem.get() to handle 'bibid' key
                             specially, as if it was a key/value pair even
                             while it is a special property of the dict.
-  2021-07-19  1.2.0.dev2    Changed to f-strings. Removing Python 2
+  2021-07-19  1.2.0-dev.2   Changed to f-strings. Removing Python 2
                             compatibility bits.
-  2021-07-20  1.2.0.dev3    Completely rewritten parsers. No regexes but
+  2021-07-20  1.2.0-dev.3   Completely rewritten parsers. No regexes but
                             `enum` states. @comment and @string still do not
                             work and error line numbers get amiss.
-  2021-07-23  1.2.0.dev4    New Biblio.gets() method.
-  2021-07-24  1.2.0.dev5    Oops, what’s needed is BibItem.gets().
-  2021-07-27  1.2.0.dev6    Still need re for Biblio.by_regex()!
-  2021-07-27  1.2.0.dev7    Added Biblio.by_bibid() in order to make writing
+  2021-07-23  1.2.0-dev.4   New Biblio.gets() method.
+  2021-07-24  1.2.0-dev.5   Oops, what’s needed is BibItem.gets().
+  2021-07-27  1.2.0-dev.6   Still need re for Biblio.by_regex()!
+  2021-07-27  1.2.0-dev.7   Added Biblio.by_bibid() in order to make writing
                             bibgrep easier.
+  2021-07-29  1.2.0-dev.8   Getting rid of Biblio.write() as it’s easier just
+                            to print() the bibliography to a file.
+  2021-07-29  1.2.0-dev.9   Moved to SemVer-compatible version numbering.
 
 '''
 
 import re
 import enum
 
-version = '1.2.0.dev7'
+version = '1.2.0-dev.9'
 
 # Recognized BibTeX keys; these keys will appear in the order given
 # when BibItem.__repr()__ is called. Any other keys in an entry will
@@ -143,18 +146,18 @@ class ItemParserState(enum.Enum):
 class BibItem(dict):
     '''BibItem is a dict containing one BibTeX entry.'''
 
-    def __init__(self, bibid=None, bibtype=None, data=None, rawdata=None):
-        if data is not None:
-            assert isinstance(data, dict)
-        if rawdata is not None:
-            assert isinstance(rawdata, str)
+    def __init__(self, bibid='', bibtype='', data=None, rawdata=None):
         self.bibid = bibid
         self.bibtype = bibtype
         self.preamble = None
-        # self.strings = {}
+        self.strings = {}
         if data:
+            if not isinstance(data, dict):
+                raise TypeError('data should be dict')
             self.update(data)
         if rawdata:
+            if not isinstance(rawdata, str):
+                raise TypeError('rawdata should be str')
             if bibtype == 'preamble':
                 self.preamble = rawdata
             elif bibtype == 'string':
@@ -399,23 +402,26 @@ class Biblio(dict):
             buff = ''.join([line for line in f])
         self.parse(buff)
 
-    def write(self, filename=None, unordered=False):
-        '''Write the bibliography to a BibTeX file.'''
-        if not filename and not self.filename:
-            raise ValueError(filename)
-        if not filename:
-            filename = self.filename
-        with open(filename, 'w') as f:
-            if unordered:
-                f.write(repr(self))
-            # Ensure decent ordering: first preamble, then not-collections,
-            # then collections—because sometimes BibTeX can’t find crossrefs
-            # unless they *follow* the reference
-            else:
-                f.write(repr(self.by_type('preamble')))
-                f.write(repr(sorted(self.by_type(['preamble', 'collection'], \
-                    complement=True))))
-                f.write(repr(sorted(self.by_type('collection'))))
+    # IS THIS NEEDED? We might just as well print() the bibliography and
+    # use `with` context in the caller?
+    #
+    # def write(self, filename=None, unordered=False):
+    #     '''Write the bibliography to a BibTeX file.'''
+    #     if not filename and not self.filename:
+    #         raise ValueError(filename)
+    #     if not filename:
+    #         filename = self.filename
+    #     with open(filename, 'w') as f:
+    #         if unordered:
+    #             f.write(repr(self))
+    #         # Ensure decent ordering: first preamble, then not-collections,
+    #         # then collections—because sometimes BibTeX can’t find crossrefs
+    #         # unless they *follow* the reference
+    #         else:
+    #             f.write(repr(self.by_type('preamble')))
+    #             f.write(repr(sorted(self.by_type(['preamble', 'collection'], \
+    #                 complement=True))))
+    #             f.write(repr(sorted(self.by_type('collection'))))
 
 # Basic test if run as a script
 if __name__ == '__main__':
