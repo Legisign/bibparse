@@ -10,7 +10,7 @@ The main class, `Biblio`, is a `dict` with methods for parsing, reading, writing
 
 ## Current version
 
-Version 1.2.0 -- 19 July 2021.
+Version 1.2.0-dev.9 -- 29 July 2021.
 
 ## Copyrights
 
