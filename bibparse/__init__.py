@@ -25,13 +25,16 @@
   2021-07-29  1.2.0-dev.8   Getting rid of Biblio.write() as it’s easier just
                             to print() the bibliography to a file.
   2021-07-29  1.2.0-dev.9   Moved to SemVer-compatible version numbering.
+  2021-09-10  1.2.0-dev.10  Patched Biblio.by_regex() to search for subtitles
+                            too if titles given as the search field; this is
+                            to simplify writing bibgrep.
 
 '''
 
 import re
 import enum
 
-version = '1.2.0-dev.9'
+version = '1.2.0-dev.10'
 
 # Recognized BibTeX keys; these keys will appear in the order given
 # when BibItem.__repr()__ is called. Any other keys in an entry will
@@ -314,9 +317,15 @@ class Biblio(dict):
 
     def by_regex(self, field, pattern):
         '''Fetch all entries where field matches pattern (a regex).'''
+        match = lambda what, where: regex.search(what.gets(where.lower()))
+        field = field.lower()
+        # Search 'subtitle' field too if 'title' given as the target
+        fields = [field] if field != 'title' else [field, 'subtitle']
         regex = re.compile(pattern)
-        match = lambda what: regex.search(what.gets(field.lower()))
-        return Biblio(entries={k: v for k, v in self.items() if match(v)})
+        results = Biblio()
+        for f in fields:
+            results.update(entries={k: v for k, v in self.items() if match(v, f)})
+        return results
 
     def by_type(self, bibtypes, complement=False):
         '''Fetch all entries of given bibtype(s).'''
