@@ -28,13 +28,14 @@
   2021-09-10  1.2.0-dev.10  Patched Biblio.by_regex() to search for subtitles
                             too if titles given as the search field; this is
                             to simplify writing bibgrep.
+  2021-09-16  1.2.0-dev.11  Bug fix: by_regex() returned a broken Biblio().
 
 '''
 
 import re
 import enum
 
-version = '1.2.0-dev.10'
+version = '1.2.0-dev.11'
 
 # Recognized BibTeX keys; these keys will appear in the order given
 # when BibItem.__repr()__ is called. Any other keys in an entry will
@@ -324,7 +325,7 @@ class Biblio(dict):
         regex = re.compile(pattern)
         results = Biblio()
         for f in fields:
-            results.update(entries={k: v for k, v in self.items() if match(v, f)})
+            results.update({k: v for k, v in self.items() if match(v, f)})
         return results
 
     def by_type(self, bibtypes, complement=False):
