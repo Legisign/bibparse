@@ -10,7 +10,7 @@ In August 2016 I switched to using PyPI-compatible version numbering scheme in o
 
 ## 1.2.0 (2021-07-19)
 
-Completely rewritten parsers and lots of other internal changes, **including** the possibility the use "..." for the BibTeX fields. Python 2 compatibility hacks discarded. f-strings utilized.
+Completely rewritten parsers and lots of other internal changes, **including** the possibility to use "..." for the BibTeX fields. Python 2 compatibility hacks discarded. f-strings utilized.
 
 ## 1.1.0 (2020-01-26)
 
