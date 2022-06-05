@@ -6,7 +6,7 @@
 
   NOTE: Some Python 2 incompatibilities exist since 1.2.0.dev2.
 
-  Copyright © 2019–2021 Legisign.org
+  Copyright © 2019–2022 Legisign.org
   Licensed under GNU General Public License version 3 or later.
 
   2021-06-19  1.2.0-dev.1   Changed BibItem.get() to handle 'bibid' key
@@ -29,13 +29,14 @@
                             too if titles given as the search field; this is
                             to simplify writing bibgrep.
   2021-09-16  1.2.0-dev.11  Bug fix: by_regex() returned a broken Biblio().
+  2022-06-05  1.2.0-dev.12  Added MissingCommaError.
 
 '''
 
 import re
 import enum
 
-version = '1.2.0-dev.11'
+version = '1.2.0-dev.12'
 
 # Recognized BibTeX keys; these keys will appear in the order given
 # when BibItem.__repr()__ is called. Any other keys in an entry will
@@ -116,6 +117,10 @@ class BibError(Exception):
 
 class ParseError(BibError):
     '''Parse error.'''
+    pass
+
+class MissingCommaError(ParseError):
+    '''Parser missing a comma.'''
     pass
 
 class DuplicateError(BibError):
@@ -255,7 +260,7 @@ class BibItem(dict):
                     state = ItemParserState.SKIP
                     next_state = ItemParserState.KEY
                 elif not c.isspace():
-                    raise ParseError(lineno, c)
+                    raise MissingCommaError(lineno, c)
             elif state == ItemParserState.KEY:
                 if c.isspace():
                     # print(f'KEY ("{curr_key}") -> EQUALS [-> VALUE]')
