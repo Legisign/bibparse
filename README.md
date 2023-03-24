@@ -10,11 +10,11 @@ The main class, `Biblio`, is a `dict` with methods for parsing, reading, writing
 
 ## Current version
 
-Version 1.2.0-dev.9 -- 29 July 2021.
+Version 1.2.0 -- 24 March 2023.
 
 ## Copyrights
 
-Copyright © 2019–2021 Legisign.org <mailto:software@legisign.org>
+Copyright © 2019–2023 Legisign.org <mailto:software@legisign.org>
 
 This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
 
