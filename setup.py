@@ -19,7 +19,7 @@
   You should have received a copy of the GNU General Public License
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-  2019-07-18  Finally going for PyPI.
+  2023-03-24  Sending version 1.2.0 finally to PyPI.
 
 '''
 
@@ -29,7 +29,7 @@ with open('README.md', 'r') as readme:
     long_description = readme.read()
 
 setuptools.setup(name='bibparse',
-                 version='1.2.0-dev.11',
+                 version='1.2.0',
                  description='Read and write BibTeX files',
                  long_description=long_description,
                  long_description_content_type='text/markdown',

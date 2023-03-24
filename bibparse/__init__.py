@@ -9,34 +9,14 @@
   Copyright © 2019–2022 Legisign.org
   Licensed under GNU General Public License version 3 or later.
 
-  2021-06-19  1.2.0-dev.1   Changed BibItem.get() to handle 'bibid' key
-                            specially, as if it was a key/value pair even
-                            while it is a special property of the dict.
-  2021-07-19  1.2.0-dev.2   Changed to f-strings. Removing Python 2
-                            compatibility bits.
-  2021-07-20  1.2.0-dev.3   Completely rewritten parsers. No regexes but
-                            `enum` states. @comment and @string still do not
-                            work and error line numbers get amiss.
-  2021-07-23  1.2.0-dev.4   New Biblio.gets() method.
-  2021-07-24  1.2.0-dev.5   Oops, what’s needed is BibItem.gets().
-  2021-07-27  1.2.0-dev.6   Still need re for Biblio.by_regex()!
-  2021-07-27  1.2.0-dev.7   Added Biblio.by_bibid() in order to make writing
-                            bibgrep easier.
-  2021-07-29  1.2.0-dev.8   Getting rid of Biblio.write() as it’s easier just
-                            to print() the bibliography to a file.
-  2021-07-29  1.2.0-dev.9   Moved to SemVer-compatible version numbering.
-  2021-09-10  1.2.0-dev.10  Patched Biblio.by_regex() to search for subtitles
-                            too if titles given as the search field; this is
-                            to simplify writing bibgrep.
-  2021-09-16  1.2.0-dev.11  Bug fix: by_regex() returned a broken Biblio().
-  2022-06-05  1.2.0-dev.12  Added MissingCommaError.
+  2023-03-24  1.2.0  Finally submitting two-year work of 1.2.0.
 
 '''
 
 import re
 import enum
 
-version = '1.2.0-dev.12'
+version = '1.2.0'
 
 # Recognized BibTeX keys; these keys will appear in the order given
 # when BibItem.__repr()__ is called. Any other keys in an entry will
