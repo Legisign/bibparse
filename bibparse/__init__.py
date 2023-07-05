@@ -6,17 +6,17 @@
 
   NOTE: Some Python 2 incompatibilities exist since 1.2.0.dev2.
 
-  Copyright © 2019–2022 Legisign.org
+  Copyright © 2019–2023 Legisign.org
   Licensed under GNU General Public License version 3 or later.
 
-  2023-03-24  1.2.0  Finally submitting two-year work of 1.2.0.
+  2023-07-05  1.3.0  Trying to simplify code.
 
 '''
 
 import re
 import enum
 
-version = '1.2.0'
+version = '1.3.0-dev.1'
 
 # Recognized BibTeX keys; these keys will appear in the order given
 # when BibItem.__repr()__ is called. Any other keys in an entry will
@@ -303,11 +303,11 @@ class Biblio(dict):
 
     def by_regex(self, field, pattern):
         '''Fetch all entries where field matches pattern (a regex).'''
-        match = lambda what, where: regex.search(what.gets(where.lower()))
         field = field.lower()
         # Search 'subtitle' field too if 'title' given as the target
         fields = [field] if field != 'title' else [field, 'subtitle']
-        regex = re.compile(pattern)
+        regex = re.compile(pattern, re.I)
+        match = lambda what, where: regex.search(what.gets(where))
         results = Biblio()
         for f in fields:
             results.update({k: v for k, v in self.items() if match(v, f)})
