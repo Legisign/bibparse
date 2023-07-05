@@ -19,7 +19,7 @@
   You should have received a copy of the GNU General Public License
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-  2023-03-24  Sending version 1.2.0 finally to PyPI.
+  2023-07-05  Committing version 1.3.0-dev.1 to GitHub.
 
 '''
 

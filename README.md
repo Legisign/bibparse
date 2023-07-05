@@ -10,7 +10,7 @@ The main class, `Biblio`, is a `dict` with methods for parsing, reading, writing
 
 ## Current version
 
-Version 1.2.0 -- 24 March 2023.
+Version 1.3.0-dev.1 -- 5 July 2023.
 
 ## Copyrights
 
@@ -71,10 +71,11 @@ These are derived from `dict` but modified to ensure lower-case keys, reasonable
 * `__lt__()`
 * `__repr__()`
 * `__setitem__()`
-* `parse(data)` -- parse string data into a BibTeX entry
+* `gets(key)` -- get key value as BibTeX-formatted string (or the empty string)
 * `update()` -- update `Biblio` using another object
+* static method `parse()`: parse data into a `BibItem`.
 
-`parse()` can be manually called for `str` input.
+`gets()` is for convenience: it’s equivalent to `to_bibtex(BibItem.get())`.
 
 `update()` has an additional optional `overwrite=bool` parameter. If `True` (the default), `update()` functions exactly like `dict.update()`, updating BibItem contents from data in the supplied `dict`. If `False`, only new keys in supplied data is added but existing values are not overwritten.
 
@@ -88,12 +89,10 @@ The `__repr__()` method is provided so that merely `print()`ing the `Biblio` obj
 
 * `by_bibid(bibids)` -- return all entries whose bibid is in the list (or set)
 * `by_regex(field, regex)` -- search in field by regex
-* `by_types(bibtypes, complement=False)` -- search by BibTeX type
+* `by_type(bibtypes, complement=bool)` -- search by BibTeX type
+* `get(key, default)` -- return a `BibItem` or the given default (by default, `None`)
 * `parse(data)`  -- parse string as BibTeX data
 * `read(filename)` -- read and parse file as BibTeX data
-* `write(filename)` -- write file in BibTeX format
-
-`parse()` can be manually called for `str` input; however, `read()` automatically calls it, as does the constructor `Biblio()` when given a filename argument.
 
 `by_bibid(bibids)` was written in order to make combining searches easier. Each `by_regex()` call returns a `Biblio` object whose keys can be obtained with `Biblio.keys()`. These keys can be used in `set` operations to provide a new list of keys that match either any (intersection) or all (union) of the keys, and `by_bibid()` can then be used to return all the entries.
 
@@ -101,3 +100,6 @@ The `__repr__()` method is provided so that merely `print()`ing the `Biblio` obj
 
 `by_types(bibtypes, complement=False)` searches the database by BibTeX types (given without the initial `"@"`) and returns the matches in a new `Biblio` object. `bibtypes` can be a string specifying a single type (e.g., `"article"`) or a list of strings specifying several types (e.g., `["article", "book"]`). If the optional `complement` parameter is set to True, the function returns the complement, i.e., all entries _not_ matching the criteria.
 
+`parse()` can be manually called for `str` input; however, `read()` automatically calls it, as does the constructor `Biblio()` when given a filename argument.
+
+**NOTE**: There used to be `write(filename)` method as well, and the code for it still exists but is commented out. Usually all that is needed is to `print()` the `Biblio`.
